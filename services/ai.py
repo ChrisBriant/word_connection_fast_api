@@ -96,6 +96,95 @@ def ai_get_linking_word(list_of_word_objects:list) -> str:
     #     reply_dict = None
     # return reply_dict
 
+def ai_get_clue_and_selected_words(list_of_word_objects:list) -> str:
+    """
+        Get a clue to match a slection of words from open AI
+        
+        :param list_of_word_objects: Description
+        :type list_of_word_objects: list
+        :return: linking_word
+        :rtype: str
+    """
+    if not API_KEY:
+        raise RuntimeError("OPENAI_API_KEY is not set")
+    
+    client = OpenAI(api_key=API_KEY)
+
+    # --- PROMPT FOR AI ---
+    prompt = f"""
+        You are generating a clue for a word connection game.
+
+        You are given this list of word objects in JSON format:
+        {list_of_word_objects}
+
+        Each object contains:
+        - "id": integer
+        - "word": string
+
+        Your task:
+
+        1. Generate ONE single English word as a clue.
+        2. The clue must NOT exactly match any word in the list.
+        3. Select the words that have a strong, clear, and guessable association with the clue.
+        4. You must select at least one word.
+        5. Aim to maximise the number of selected words, but NEVER at the expense of strong association.
+        6. Weak or vague associations are not allowed.
+
+        CRITICAL STRUCTURE RULES:
+        - You MUST return ALL original objects.
+        - You MUST preserve the original order.
+        - You MUST NOT modify any "id" values.
+        - You MUST NOT modify any "word" values.
+        - You may ONLY add a boolean field called "selected".
+        - Every object must contain: id, word, selected.
+
+        Output Rules:
+        - Return ONLY valid JSON.
+        - No markdown.
+        - No explanations.
+        - The JSON must match this exact structure:
+
+        {{
+        "clue": "<single_word>",
+        "selected_words": [
+            {{ "id": <original_id>, "word": "<original_word>", "selected": true_or_false }}
+        ]
+        }}
+
+        The selected_words array MUST contain the same number of objects as the input.
+    """
+
+    # --- API CALL ---
+    response = client.responses.create(
+        model="gpt-4o-mini",
+        input=[
+            {"role": "system", "content": "You are generating a clue for a word connection game."},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.2,
+        max_output_tokens=500
+    )
+
+    # --- EXTRACT TEXT OUTPUT ---
+    # Raw model output
+    raw_output = response.output_text.strip()
+
+    # Remove any code fences ``` or ```python
+    clean_output = re.sub(r"^```(?:python)?|```$", "", raw_output, flags=re.MULTILINE).strip()
+
+    # Convert to Python object
+    #selected_words_with_clue= ast.literal_eval(clean_output)
+    selected_words_with_clue = json.loads(clean_output)
+
+    #selected_words_list = ast.literal_eval(response.output_text.strip())
+    print("SELECTED WORDS", selected_words_with_clue)
+    #TODO:
+    #Need to validate the response, word ids and words must match
+    #Error handling from API method needs to return a 400 error if the AI fails
+
+    return selected_words_with_clue
+
+
 def validate_ai_output(original_words : list, generated_words: list, number_of_words: int) -> bool:
     #Check the AI has output the same words
     ai_words_list = [ gen_word["word"] for gen_word in generated_words]
@@ -198,13 +287,52 @@ def ai_guess_word(list_of_word_objects:list,clue:str,num_words_to_select:int) ->
     return selected_words_list
 
 if __name__ == "__main__":
-    word_selection = [{'seq': 1, 'word': 'body', 'selected': True}, {'seq': 2, 'word': 'border', 'selected': False}, {'seq': 3, 'word': 'pen', 'selected': True}, {'seq': 4, 'word': 'shoulder', 'selected': False}, {'seq': 5, 'word': 'panic', 'selected': False}, {'seq': 6, 'word': 'mud', 'selected': False}, {'seq': 7, 'word': 'league', 'selected': False}, {'seq': 8, 'word': 'client', 'selected': True}, {'seq': 9, 'word': 'agent', 'selected': True}]
-    for word in word_selection:
-        del word["selected"] 
-    print("WORDS", word_selection)
+    # word_selection = [{'seq': 1, 'word': 'body', 'selected': True}, {'seq': 2, 'word': 'border', 'selected': False}, {'seq': 3, 'word': 'pen', 'selected': True}, {'seq': 4, 'word': 'shoulder', 'selected': False}, {'seq': 5, 'word': 'panic', 'selected': False}, {'seq': 6, 'word': 'mud', 'selected': False}, {'seq': 7, 'word': 'league', 'selected': False}, {'seq': 8, 'word': 'client', 'selected': True}, {'seq': 9, 'word': 'agent', 'selected': True}]
+    # for word in word_selection:
+    #     del word["selected"] 
+    # print("WORDS", word_selection)
     #ai_get_linking_word(word_selection)
+    word_selection = [{
+            "id": 992,
+            "word": "golf"
+        },
+        {
+            "id": 747,
+            "word": "budget"
+        },
+        {
+            "id": 301,
+            "word": "excitement"
+        },
+        {
+            "id": 493,
+            "word": "study"
+        },
+        {
+            "id": 901,
+            "word": "guarantee"
+        },
+        {
+            "id": 1092,
+            "word": "anger"
+        },
+        {
+            "id": 486,
+            "word": "work"
+        },
+        {
+            "id": 1515,
+            "word": "silly"
+        },
+        {
+            "id": 942,
+            "word": "holiday"
+        }
+    ]
     try:
-        ai_guess_word(word_selection,"fart",4)
+        #ai_guess_word(word_selection,"fart",4)
+        ai_clue_and_words =  ai_get_clue_and_selected_words(word_selection)
+        print("AI RESPONSE", ai_clue_and_words)
     except Exception as e:
         print("ERROR ", e)
 

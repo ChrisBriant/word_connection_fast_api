@@ -112,6 +112,11 @@ async def api_guess_selection(clue_with_selection : ClueWithSelectedWordsSchema,
 
     return response
 
+@app.post('/generatewordsandclue', response_model=str)
+async def api_generate_clue(word_selection: List[WordWithoutSelectionSchema] , api_key: str = Depends(get_api_key)):
+    print("INPUT DATA", word_selection)
+    return "Hello"
+
 
 #     print("TRANSLATION ID ", translation_id_and_voice.translation_id)
 #     async_session = sessionmaker(
