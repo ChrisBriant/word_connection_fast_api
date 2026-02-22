@@ -179,7 +179,9 @@ def ai_get_clue_and_selected_words(list_of_word_objects:list) -> str:
     #selected_words_list = ast.literal_eval(response.output_text.strip())
     print("SELECTED WORDS", selected_words_with_clue)
     #TODO:
-    #Need to validate the response, word ids and words must match
+    #Need to validate the response, 
+    #   1 .word ids and words must match
+    #   2. clue word must be different from any of the selected words 
     #Error handling from API method needs to return a 400 error if the AI fails
 
     return selected_words_with_clue
