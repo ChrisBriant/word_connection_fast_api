@@ -1,0 +1,11 @@
+.env
+.env_redirects
+neuropunkbackend.sock
+backups/
+output/
+audio/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
