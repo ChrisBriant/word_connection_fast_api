@@ -96,6 +96,30 @@ def ai_get_linking_word(list_of_word_objects:list) -> str:
     #     reply_dict = None
     # return reply_dict
 
+
+def validate_ai_clue(original_words:list,ai_response:list, clue:str) -> bool:
+    """
+    #   1 .word ids and words must match
+    #   2. clue word must be different from any of the selected words         
+    """
+    #Get the original ids and response IDs
+    original_ids = [ word["id"]  for word in original_words]
+    response_ids = [ word["id"]  for word in ai_response]
+    if set(original_ids) != set(response_ids):
+        print("IDs do not match")
+        return False
+    #Get the original words and response words
+    original_words = [ word["word"]  for word in original_words]
+    response_words = [ word["word"]  for word in ai_response]
+    if set(original_words) != set(response_words):
+        print("Words do not match")
+        return False
+    #Check the clue word
+    if clue in original_words:
+        print("Clue is in word list")
+        return False
+    return True
+
 def ai_get_clue_and_selected_words(list_of_word_objects:list) -> str:
     """
         Get a clue to match a slection of words from open AI
@@ -183,7 +207,13 @@ def ai_get_clue_and_selected_words(list_of_word_objects:list) -> str:
     #   1 .word ids and words must match
     #   2. clue word must be different from any of the selected words 
     #Error handling from API method needs to return a 400 error if the AI fails
-
+    if not validate_ai_clue(list_of_word_objects,selected_words_with_clue["selected_words"],selected_words_with_clue["clue"]):
+        raise AIResponseNotValid(
+            message="Mismatch between input words and clue response.",
+            response=response,
+            errors=["Invalid clue response from AI"]
+        )
+    
     return selected_words_with_clue
 
 
@@ -239,10 +269,11 @@ def ai_guess_word(list_of_word_objects:list,clue:str,num_words_to_select:int) ->
         - "word": the word string
 
         2. A linking word: "{clue}"  
-        3. A number of words that are connected: {num_words_to_select}
+        3. EXACT_NUMBER_OF_WORDS_TO_SELECT : {num_words_to_select}
 
         Task:
-        - Identify exactly {num_words_to_select} words that are most clearly connected to the linking word.  
+        - You mustIdentify exactly {num_words_to_select} words that are most clearly connected to the linking word.  
+        - The number of identified words must match the value EXACT_NUMBER_OF_WORDS_TO_SELECT, even if there is no obvious connection you must select a number of words that matches this value.
         - Update ONLY the "selected" field of the original word objects:  
         - Set "selected": True for the words you choose.  
         - Set "selected": False for all other words.  
@@ -256,6 +287,8 @@ def ai_guess_word(list_of_word_objects:list,clue:str,num_words_to_select:int) ->
 
         Output:
     """
+    print("PROMPT",prompt)
+
     response = client.responses.create(
         model="gpt-4o-mini",
         input=[

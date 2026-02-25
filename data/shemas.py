@@ -25,6 +25,13 @@ class ClueWithSelectedWordsSchema(BaseModel):
     number_of_selected_words : int
     words : List[WordWithoutSelectionSchema]
 
+class AIClueWithSelectedWordsSchema(BaseModel):
+    clue_id : int
+    clue : str
+    number_of_selected_words : int
+    created_at : datetime
+    words : List[WordSchema]
+
 class AIGuessResponseSchema(BaseModel):
     clue : str
     number_of_selected_words : int
