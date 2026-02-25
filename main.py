@@ -16,6 +16,7 @@ from data.db_actions import (
     add_clue_to_selection,
     create_word_connection,
     get_word_connection_by_id,
+    get_clue_by_id,
 )
 from data.shemas import (
     WordWithoutSelectionSchema,
@@ -237,119 +238,32 @@ async def api_generate_words_and_clie( api_key: str = Depends(get_api_key)):
 
     return response
 
-#     print("TRANSLATION ID ", translation_id_and_voice.translation_id)
-#     async_session = sessionmaker(
-#         engine, class_=AsyncSession, expire_on_commit=False
-#     )
 
-#     usages_list = []
+@app.get('/getclueresponsefromid', response_model=AIClueWithSelectedWordsSchema)
+async def api_get_clue_response_from_id(clue_id: int = Query(0, title="Clue ID"),api_key: str = Depends(get_api_key)):
+    async_session = sessionmaker(
+        engine, class_=AsyncSession, expire_on_commit=False
+    )
 
-#     async with async_session() as session:
-#         usages = await get_usages_by_translation_id(session,int(translation_id_and_voice.translation_id))
-#         print("USAGES", usages)
-#         if len(usages) < 1:
-#             raise HTTPException(status_code=404, detail=f"No usages found.")
-#         for usage in usages[0:1]:
-#             print("USAGE OBJECT", usage.id, usage.ja)
-#             #Set usage ID to a variable
-#             usage_id = usage.id
+    clue = None
 
-
-#             #This gets the audio link if it already exists so we don't waste tokens for Eleven LABS
-
-#             existing_usage = await get_existing_audio_for_usage(session,usage.id)
-#             if(existing_usage):
-#                 # usages_list.append(LinkResponse.model_validate({
-#                 #     "id": existing_usage.id,
-#                 #     "usage_id": existing_usage.usage_id,
-#                 #     "audio_id": existing_usage.audio_id,
-#                 #     "storage_url": existing_usage.audio.storage_url,
-#                 #     "created_at": existing_usage.created_at,
-#                 # }))
-#                 usages_list.append(existing_usage)
-#                 continue
-
-#             #Generate the audio file
-#             BASE_DIR = Path(__file__).resolve().parent
-#             audio_dir = BASE_DIR / "audio"
-#             audio_dir.mkdir(exist_ok=True)
-#             audio_filename = str(uuid.uuid4()) + ".mp3"
-#             audio_path = audio_dir / audio_filename
-
-#             voice_id_to_send = translation_id_and_voice.voice_id if translation_id_and_voice.voice_id else "EXAVITQu4vr4xnSDxMaL"
-#             print("THE VOICE ID IS", voice_id_to_send)
-
-#             try:
-#                 audio_file_path = await get_audio_from_eleven_labs(usage.ja,audio_path,voice_id_to_send)
-#             except ElevenLabsAPIError as elae:
-#                 print("ELAE", elae)
-#                 if elae.status_code == 404:
-#                     raise HTTPException(status_code=404, detail=f"A voice with the voice id ${voice_id_to_send} was not found.")
-#                 else:
-#                     raise HTTPException(status_code=400, detail="An error occurred generating the audio.")
-#             except Exception as e:
-#                 raise HTTPException(status_code=400, detail="An error occurred generating the audio.")
-
-#             #Upload the audio file to S3 storage
-#             with open(audio_file_path, "rb") as f:
-#                 #Get the file data required for transferring to S3
-#                 audio_data = f.read()
-#             storage_url = await upload_to_s3(audio_data,audio_filename)
-#             print("UPLOADED FILE ", storage_url)
-
-#             link = await add_usage_audio(session,usage_id,storage_url,voice_id_to_send)
-#             #link_obj = LinkResponse.model_validate(link)
-#             print("ADDED STORAGE LINK TO DB", link.__dict__)
-#             usages_list.append(LinkResponse.model_validate({
-#                 "id": link.id,
-#                 "usage_id": usage_id,
-#                 "storage_url": link.storage_url,
-#                 "created_at": link.created_at,
-#             }))
-#     return usages_list
-
-# @app.get('/gettranslation', response_model=TranslationWithAudioResponse)
-# async def get_translation_by_word_or_id(
-#     translation_id: int = Query(None, ge=1, description="Page number, must be >= 1"),
-#     word: str = Query(None, description="Page number, must be >= 1"),
-# ):
-#     if(not word and not translation_id):
-#         raise HTTPException(status_code=400,detail="translation_id or word must be included in the query parameters")
-
-#     async_session = sessionmaker(
-#         engine, 
-#         class_=AsyncSession, expire_on_commit=False
-#     )
-
-#     translation = None
-#     audio = None
-
-#     async with async_session() as session:
-#         #Try the id first
-#         if(translation_id):
-#             translation, audio = await get_translation_with_audio_by_id(session,translation_id)
-#             #print(translation)
-#             if not translation and word:
-#                 #Try getting by word
-#                 translation, audio = await get_translation_with_audio_by_word(session,word)
-
-#         if not translation_id and word:
-#             #Try getting by word
-#             translation, audio = await get_translation_with_audio_by_word(session,word)
-
-#     if not translation:
-#         raise HTTPException(status_code=404,detail="Translation not found.")
-    
-
-
-#     #Create the response
-#     response = TranslationWithAudioResponse(
-#         translation=translation,
-#         audio=audio
-#     )
-#     return response
-
-
+    async with async_session() as session:
+        try:
+            clue = await get_clue_by_id(session,clue_id)
+        except Exception as e:
+            print("ERROR OCCURRED", e)
+            raise HTTPException(status_code=400, detail=f"An error occurred fetching the clue.")
+    if not clue:
+        raise HTTPException(status_code=404, detail=f"Clue not found.")
+    word_selections = [ WordSchema(id=word_link.word_id, word=word_link.word.word, selected=word_link.selected) for word_link in clue.connection.word_links ]
+    response = AIClueWithSelectedWordsSchema(
+        clue_id = clue.id,
+        clue = clue.clue,
+        number_of_selected_words = clue.clue_word_count,
+        created_at = clue.created_at,
+        words=word_selections
+    )
+    return response
 
 async def start_fastapi():
     config = Config(app=app, host="0.0.0.0", port=8000, loop="asyncio", reload=True)
