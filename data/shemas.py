@@ -32,30 +32,38 @@ class AIClueWithSelectedWordsSchema(BaseModel):
     created_at : datetime
     words : List[WordSchema]
 
+class AIClueWithUnselectedWordsSchema(BaseModel):
+    clue_id : int
+    clue : str
+    number_of_selected_words : int
+    created_at : datetime
+    words : List[WordWithoutSelectionSchema]
+
+
 class AIGuessResponseSchema(BaseModel):
     clue : str
     number_of_selected_words : int
     words : List[WordSchema]
 
-class WordConnectionWordSchema(BaseModel):
-    word: WordSchema
-    selected: Optional[bool]
+# class WordConnectionWordSchema(BaseModel):
+#     word: WordSchema
+#     selected: Optional[bool]
 
-    model_config = ConfigDict(from_attributes=True)
+#     model_config = ConfigDict(from_attributes=True)
 
-class WordConnectionSchema(BaseModel):
-    id: int
-    word_links: List[WordConnectionWordSchema]
+# class WordConnectionSchema(BaseModel):
+#     id: int
+#     word_links: List[WordConnectionWordSchema]
 
-    model_config = ConfigDict(from_attributes=True)
+#     model_config = ConfigDict(from_attributes=True)
 
 
 
-class ClueSchema(BaseModel):
-    id: int
-    clue: str
-    clue_word_count: int
-    created_at: datetime
-    connection: WordConnectionSchema
+# class ClueSchema(BaseModel):
+#     id: int
+#     clue: str
+#     clue_word_count: int
+#     created_at: datetime
+#     connection: WordConnectionSchema
 
-    model_config = ConfigDict(from_attributes=True)
+#     model_config = ConfigDict(from_attributes=True)

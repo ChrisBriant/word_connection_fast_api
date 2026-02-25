@@ -22,7 +22,8 @@ from data.shemas import (
     WordSchema,
     ClueWithSelectedWordsSchema,
     AIGuessResponseSchema,
-    AIClueWithSelectedWordsSchema
+    AIClueWithSelectedWordsSchema,
+    AIClueWithUnselectedWordsSchema,
 )
 from authentication.auth import get_api_key
 from services.ai import  ai_guess_word, ai_get_clue_and_selected_words
@@ -179,7 +180,7 @@ async def api_generate_clue(word_selection: List[WordWithoutSelectionSchema] , a
 
 
 
-@app.post('/generatewordsandclue', response_model=AIClueWithSelectedWordsSchema)
+@app.post('/generatewordsandclue', response_model=AIClueWithUnselectedWordsSchema)
 async def api_generate_words_and_clie( api_key: str = Depends(get_api_key)):
     """
         Words selection is generated and AI creates the clue
@@ -197,12 +198,12 @@ async def api_generate_words_and_clie( api_key: str = Depends(get_api_key)):
         word_objects = [{"id": word.id, "word" : word.word} for word in word_connection]
         print("INPUT DATA WORD OBJECTS", word_objects)
         #2. Get the clue from AI
-        try:
-            ai_clue_response = ai_get_clue_and_selected_words(word_objects)
-        except Exception as e:
-            print("AI ERROR", e)
-            raise HTTPException(status_code=400, detail=f"Invalid AI response.")
-        #ai_clue_response = {'clue': 'light', 'selected_words': [{'id': 1327, 'word': 'deep', 'selected': False}, {'id': 1064, 'word': 'candle', 'selected': True}, {'id': 3, 'word': 'way', 'selected': False}, {'id': 1334, 'word': 'cancel', 'selected': False}, {'id': 1078, 'word': 'pension', 'selected': False}, {'id': 941, 'word': 'grade', 'selected': False}, {'id': 536, 'word': 'fat', 'selected': False}, {'id': 870, 'word': 'interview', 'selected': False}, {'id': 1514, 'word': 'rub', 'selected': False}]}
+        # try:
+        #     ai_clue_response = ai_get_clue_and_selected_words(word_objects)
+        # except Exception as e:
+        #     print("AI ERROR", e)
+        #     raise HTTPException(status_code=400, detail=f"Invalid AI response.")
+        ai_clue_response = {'clue': 'light', 'selected_words': [{'id': 1327, 'word': 'deep', 'selected': False}, {'id': 1064, 'word': 'candle', 'selected': True}, {'id': 3, 'word': 'way', 'selected': False}, {'id': 1334, 'word': 'cancel', 'selected': False}, {'id': 1078, 'word': 'pension', 'selected': False}, {'id': 941, 'word': 'grade', 'selected': False}, {'id': 536, 'word': 'fat', 'selected': False}, {'id': 870, 'word': 'interview', 'selected': False}, {'id': 1514, 'word': 'rub', 'selected': False}]}
         print("API AI RESPONSE", ai_clue_response)
         selected_flags = [word["selected"] for word in ai_clue_response["selected_words"]]
         word_selection = await create_word_connection(session,word_connection,selected_flags=selected_flags)
@@ -224,7 +225,7 @@ async def api_generate_words_and_clie( api_key: str = Depends(get_api_key)):
         print("WORD SELECTIONS", word_selections)
         print("API CLUE RESPONSE", clue.to_dict())
         #THIS FAILS WHEN TRYING TO ASSIGN THE DATE
-        response = AIClueWithSelectedWordsSchema(
+        response = AIClueWithUnselectedWordsSchema(
             clue_id = clue.id,
             clue = clue.clue,
             number_of_selected_words = clue.clue_word_count,
